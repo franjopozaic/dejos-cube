@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>Rubik's cube</title>
+
+        <!-- Babylon.js -->
+        <script src="https://code.jquery.com/pep/0.4.2/pep.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+        <script src="https://preview.babylonjs.com/ammo.js"></script>
+        <script src="https://preview.babylonjs.com/cannon.js"></script>
+        <script src="https://preview.babylonjs.com/Oimo.js"></script>
+        <script src="https://preview.babylonjs.com/gltf_validator.js"></script>
+        <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+        <script src="https://preview.babylonjs.com/babylon.js"></script>
+        <script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+        <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+        <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+        <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+        <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+        </style>
+    </head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        var canvas = document.getElementById("renderCanvas");
+
+        var createScene = function () {
+        
+            var scene = new BABYLON.Scene(engine);
+            //kamera i svjetla su defaultni vise manje 
+            var camera = new BABYLON.ArcRotateCamera("Camera", 3 * Math.PI / 4, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.setPosition(new BABYLON.Vector3(-15, 15, -15));
+			camera.lowerRadiusLimit = 6.5;
+            var light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
+            var light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(0, 1, -1), scene);
+			light2.intensity = 0.25;
+			light2.position = camera.position;
+            
+            var box = BABYLON.MeshBuilder.CreateBox("", {width: 1.8, height: 1.8, depth: 0.2}, scene);
+            var sphere = BABYLON.MeshBuilder.CreateSphere("", {diameter: 2.07}, scene);
+            var side = BABYLON.CSG.FromMesh(box).intersect(BABYLON.CSG.FromMesh(sphere)).toMesh("side", createMaterial(new BABYLON.Color3(1, 0, 0),), scene);
+            box.dispose();
+            sphere.dispose();
+            
+             var rotator = BABYLON.MeshBuilder.CreateBox("cube", {size: 2}, scene); 
+             rotator.material = createMaterial(new BABYLON.Color3(0, 0, 0));
+			 
+            var cubes = []; 
+			
+            for(var x = -2; x < 3; x += 2) {
+              var cubesOuter = [];
+                for(var y = -2; y < 3; y += 2) {
+                   var cubesInner = [];
+                    for(var z = -2; z < 3; z += 2) {
+                       var box = rotator.clone("x" + "y" + "z");
+                        if(x == -2) {
+                            var cube = side.clone("cube");
+                            cube.position.x = -1;
+                            cube.rotation.y = Math.PI / 2;
+                            cube.parent = box;
+							cube.material = createMaterial(new BABYLON.Color3(1, 0, 0));
+							
+							addAction1(cube);
+							
+							
+                        }
+                        if(x == 2) {
+                            var cube = side.clone("cube");
+                            cube.position.x = 1;
+                            cube.parent = box;
+                            cube.rotation.y = Math.PI / 2;
+                            cube.material = createMaterial(new BABYLON.Color3(0, 1, 0));
+							
+							addAction1(cube);
+							
+                        }
+        
+                        if(y == -2) {
+                            var cube = side.clone("cube");
+                            cube.position.y = -1;
+                            cube.parent = box;
+                            cube.material = createMaterial(new BABYLON.Color3(0, 0, 1));
+                            cube.rotation.x = Math.PI / 2;
+							
+							addAction1(cube);
+							
+                        }
+                        if(y == 2) {
+                            var cube = side.clone("cube");
+                            cube.position.y = 1;
+                            cube.parent = box;
+                            cube.material = createMaterial(new BABYLON.Color3(0.5, 0.5, 0));
+                            cube.rotation.x = Math.PI / 2;
+							
+							addAction1(cube);
+							
+                        }
+                        if(z == -2) {
+                            var cube = side.clone("cube");
+                            cube.position.z = -1;
+                            cube.parent = box;                         
+                            cube.material = createMaterial(new BABYLON.Color3(0.5, 0, 0.5));
+							
+							addAction1(cube);
+							
+                         }
+                         if(z == 2) {
+                           var cube = side.clone("cube");
+                           cube.position.z = 1;
+                           cube.parent = box;
+                           cube.material = createMaterial(new BABYLON.Color3(0, 0.5, 0.5));
+						   
+						   addAction1(cube);
+						  
+                        }
+                        box.position = new BABYLON.Vector3(x, y, z);
+						
+                        cubesInner.push(box);
+                    }
+                   cubesOuter.push(cubesInner);
+                }
+                cubes.push(cubesOuter);
+            }
+
+            side.dispose();
+            rotator.visibility = false;
+
+           function createMaterial(color) {
+                var material = new BABYLON.StandardMaterial("" + color, scene);
+                material.diffuseColor = color;
+                return material;
+            }
+           
+
+            //mozda predat cubese kao parametar da nema side effecta?
+
+           function permutateX(x, angle = Math.PI / 2) { 
+		   var permutation = new Array(3);
+		   
+           for(var i = 0; i < 3; i++) {
+               permutation[i] = new Array(3);
+			   
+            }
+               for(var y = 0; y < 3; y++) {
+                  for(var z = 0; z < 3; z++) {
+				    permutation[y][z] = cubes[x][z][2 - y];
+					
+                    }
+                }
+			
+			 for(var y = 0; y < 3; y++) {
+			    for(var z = 0; z < 3; z++) {
+				  cubes[x][y][z] = permutation[y][z];
+				  
+				}
+			 }
+			 if(angle == Math.PI / 2) {
+			 return;
+			 }
+			
+			permutateX(x);
+			if(angle == Math.PI || angle == -Math.PI) {
+			return;
+			}
+			
+           permutateX(x);
+            }
+			
+          function permutateY(y, angle = Math.PI / 2) {
+		    var permutation = new Array(3);
+           for(var i = 0; i < 3; i++) {
+               permutation[i] = new Array(3);
+            }
+             for(var x = 0; x < 3; x++) {
+                   for(var z = 0; z < 3; z++) {
+				      permutation[z][x] = cubes[2 - x][y][z];
+					  }
+                }
+			 for(var x = 0; x < 3; x++) {
+			 for(var z = 0; z < 3; z++) {
+			 cubes[x][y][z] = permutation[x][z];
+			 }
+			 } 
+             if(angle == Math.PI / 2) {
+			 return;
+			 }
+			 permutateY(y);
+			 if(angle == Math.PI || angle == -Math.PI) {
+			 return;
+			 }
+			 permutateY(y);
+             
+          }
+	
+
+         function permutateZ(z, angle = Math.PI / 2) {
+		    var permutation = new Array(3);
+           for(var i = 0; i < 3; i++) {
+               permutation[i] = new Array(3);
+            }
+             for(var x = 0; x < 3; x++) {
+                for(var y = 0; y < 3; y++) {
+		             permutation[y][x] = cubes[x][2 - y][z];
+                    }
+				  }
+			  for(var x = 0; x < 3; x++) {
+			  for(var y = 0; y < 3; y++) {
+			  cubes[x][y][z] = permutation[x][y];
+			  }
+			  } 
+             if(angle == Math.PI / 2) {
+			 return;
+			 }
+           permutateZ(z);
+		   if(angle == Math.PI || angle == -Math.PI) {
+		   return;
+		   }
+		   permutateZ(z);
+         }
+        
+           var animationRunning = false;
+		   
+             function rotateX(x, angle) {
+			 if(!animationRunning) {
+			 animationRunning = true;
+             for(var y = 0; y < 3; y++) {
+                for(var z = 0; z < 3; z++) {
+                    cubes[x][y][z].parent = rotator;
+                 }
+               }
+			  var deltaAngle = 0;
+			  var animate = setInterval(() => {
+			  
+			                                     rotator.rotation.x = deltaAngle;
+												
+												  deltaAngle += angle / 30;
+												  
+			                                     if(Math.abs(deltaAngle) >= Math.abs(angle)) {
+												    rotator.rotation.x = angle;
+													
+                                                   for(var y = 0; y < 3; y++) {
+                                                      for(var z = 0; z < 3; z++) {
+                                                          cubes[x][y][z].setParent(null);               
+                                                        }              
+                                                    }
+               
+                                                    rotator.rotation.x = 0;
+                                                    permutateX(x, angle);
+			                                        animationRunning = false;
+													
+												    clearInterval(animate);											    											    
+												 }											 											 											  											
+			                                   }, 30);
+               
+		    } 
+			 
+		   }
+		
+		  
+          
+		   function rotateY(y, angle) {
+		   if(!animationRunning) {
+		   animationRunning = true;
+             for(var x = 0; x < 3; x++) {
+                for(var z = 0; z < 3; z++) {
+                    cubes[x][y][z].parent = rotator;
+                 }
+               }
+			   var deltaAngle = 0;
+			   var animate = setInterval(() => {
+			   
+			                                      rotator.rotation.y = deltaAngle;
+												  deltaAngle += angle / 30;
+												  
+			                                     if(Math.abs(deltaAngle) >= Math.abs(angle)) {
+												    rotator.rotation.y = angle;
+        
+                                                    for(var x = 0; x < 3; x++) {
+                                                        for(var z = 0; z < 3; z++) {
+                                                           cubes[x][y][z].setParent(null);               
+                                                        }              
+                                                    }
+               
+                                                    rotator.rotation.y = 0;
+                                                    permutateY(y, angle);
+			                                        animationRunning = false;
+												   clearInterval(animate);											     											    
+												 }											 
+											   }, 30);	 
+		  }
+		      
+			 }
+		  
+		  
+		  
+		   function rotateZ(z, angle) {
+		   if(!animationRunning) {
+		   animationRunning = true;
+             for(var x = 0; x < 3; x++) {
+                for(var y = 0; y < 3; y++) {
+                    cubes[x][y][z].parent = rotator;
+                 }
+               }
+			  var deltaAngle = 0;
+			   var animate = setInterval(() => {
+			   
+			                                      rotator.rotation.z = deltaAngle;
+												  deltaAngle += angle / 30;
+												  
+			                                     if(Math.abs(deltaAngle) >= Math.abs(angle)) {
+												 rotator.rotation.z = angle;
+        
+                                                    for(var x = 0; x < 3; x++) {
+                                                       for(var y = 0; y < 3; y++) {
+                                                          cubes[x][y][z].setParent(null);               
+                                                        }               
+                                                    }
+               
+                                                      rotator.rotation.z = 0;
+                                                     permutateZ(z, angle);
+			                                        animationRunning = false;
+												  clearInterval(animate);											     											    
+												 }											 											 											  																						
+			                                   }, 30);    	 
+		  }
+		  
+		  }
+		  
+		  var start = new Array(3);
+			var end = new Array(3);
+			var firstClick = false;
+			var clickMesh = null;
+		  
+		  function addAction1(mesh) {
+			mesh.actionManager = new BABYLON.ActionManager(scene);
+			mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickDownTrigger,(event) => {
+			                                                                                                                if(!animationRunning) {
+			
+			                                                                                                                 if(!firstClick) {
+																															 
+																															 clickMesh = event.meshUnderPointer;
+																															
+																															 clickMesh.material.alpha = 0.5;
+																															 
+																															start[0] = Math.round(event.meshUnderPointer.getAbsolutePosition().x - rotator.position.x) / 2 + 1;
+																															start[1] = Math.round(event.meshUnderPointer.getAbsolutePosition().y - rotator.position.y) / 2 + 1;
+																															start[2] = Math.round(event.meshUnderPointer.getAbsolutePosition().z - rotator.position.z) / 2 + 1;
+																															
+																															 
+																															  firstClick = true;
+			                                                                                                                 }
+																															
+			                                                                                                                else {
+																															 
+																															 end[0] = Math.round(event.meshUnderPointer.getAbsolutePosition().x - rotator.position.x) / 2 + 1;
+																															 end[1] = Math.round(event.meshUnderPointer.getAbsolutePosition().y - rotator.position.y) / 2 + 1;
+																															 end[2] = Math.round(event.meshUnderPointer.getAbsolutePosition().z - rotator.position.z) / 2 + 1;
+																															
+																															 clickMesh.material.alpha = 1;
+																															 clickMesh = null;
+																															
+																															 firstClick = false;
+																															 rotate(start, end);																														 
+																														    																															   																															
+																															 }
+			                                                                                                                 
+																															}
+																															}
+			                                                                                                                ));
+																															
+																															
+			}
+			//e ovo je grdo, izgleda ko iz 60-ih kod :) mozda to malo doradit
+			function rotate(start, end) {
+			   if(start[2] == -0.5 && start[1] == end[1] && start[0] > end[0] || 
+			      start[0] == -0.5 && start[1] == end[1] && start[2] < end[2] ||
+				  start[2] == 2.5 && start[1] == end[1] && start[0] < end[0] ||
+				  start[0] == 2.5 && start[1] == end[1] && start[2] > end[2]) {
+			     rotateY(start[1], Math.PI / 2);
+			   }
+			   if(start[2] == -0.5 && start[1] == end[1] && start[0] < end[0] ||
+			      start[0] == -0.5 && start[1] == end[1] && start[2] > end[2] ||
+				  start[2] == 2.5 && start[1] == end[1] && start[0] > end[0] ||
+				  start[0] == 2.5 && start[1] == end[1] && start[2] < end[2]) {
+			   rotateY(start[1], -Math.PI / 2);
+			   }
+			   if(start[2] == -0.5 && start[0] == end[0] && start[1] < end[1] ||
+			   start[1] == 2.5 && start[0] == end[0] && start[2] < end[2] ||
+			   start[2] == 2.5 && start[0] == end[0] && start[1] > end[1] ||
+			   start[1] == -0.5 && start[0] == end[0] && start[2] > end[2]) {
+			    rotateX(start[0], Math.PI / 2);
+			   }
+			    if(start[2] == -0.5 && start[0] == end[0] && start[1] > end[1] ||
+			   start[1] == 2.5 && start[0] == end[0] && start[2] > end[2] ||
+			   start[2] == 2.5 && start[0] == end[0] && start[1] < end[1] ||
+			   start[1] == -0.5 && start[0] == end[0] && start[2] < end[2]) {
+			    rotateX(start[0], -Math.PI / 2);
+			   }
+			   if(start[0] == -0.5 && start[2] == end[2] && start[1] < end[1] ||
+			   start[1] == 2.5 && start[2] == end[2] && start[0] < end[0] ||
+			   start[0] == 2.5 && start[2] == end[2] && start[1] > end[1] ||
+			   start[1] == -0.5 && start[2] == end[2] && start[0] > end[0]) {
+			    rotateZ(start[2], -Math.PI / 2);
+			   }
+			   if(start[0] == -0.5 && start[2] == end[2] && start[1] > end[1] ||
+			   start[1] == 2.5 && start[2] == end[2] && start[0] > end[0] ||
+			   start[0] == 2.5 && start[2] == end[2] && start[1] < end[1] ||
+			   start[1] == -0.5 && start[2] == end[2] && start[0] < end[0]) {
+			    rotateZ(start[2], Math.PI / 2);
+			   }
+			}
+			
+			
+	
+			
+			function shuffle() {
+			
+		    var count = 0;
+            var interval = setInterval(() => {
+			              if(count > 9) {
+						  clearInterval(interval);
+						  }
+			               
+            			   var alpha;
+                          var num0 = Math.floor(3 * Math.random());
+	                      var num1 = Math.floor(3 * Math.random());
+                          var num2 = Math.floor(3 * Math.random());
+						  switch(num0) {
+                             case 1:
+                                alpha = Math.PI / 2;
+                                break;
+                             case 2: 
+                                alpha = -Math.PI / 2;
+                                break;
+                             default: 
+                                alpha = Math.PI;
+	                        }
+                          switch(num1) {
+                             case 1:
+                                rotateX(num2, alpha);
+								count++;
+                                break;
+                             case 2: 
+                                rotateY(num2, alpha);
+								count++;
+                                break;
+                             default: 
+                                rotateZ(num2, alpha); 
+								count++;
+								}
+								}, 1000); 
+								
+								}
+								
+								
+	         shuffle();               
+    
+            return scene;
+           //ili skroz odvojit kocku od scene pa da bude vise objektni đir?
+        };
+        
+        var engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        var scene = createScene();
+
+        engine.runRenderLoop(function () {
+            if (scene) {
+                scene.render();
+            }
+        });
+
+        
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
